@@ -1,0 +1,149 @@
+
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression, Ridge
+
+df = pd.read_csv(
+    'machine-learning-zoomcamp/02-regression/car_fuel_efficiency_2026.csv'
+)
+
+print(df.isnull().sum())
+print(df.horsepower.median())
+
+n = len(df)
+
+n_val = int(n * 0.2)
+n_test = int(n * 0.2)
+n_train = n - n_val - n_test
+
+np.random.seed(42)
+
+idx = np.arange(n)
+np.random.shuffle(idx)
+
+df_train = df.iloc[idx[:n_train]]
+df_val = df.iloc[idx[n_train:n_train + n_val]]
+df_test = df.iloc[idx[n_train + n_val:]]
+
+features = [
+    'engine_displacement',
+    'horsepower',
+    'vehicle_weight',
+    'model_year'
+]
+
+y_train = df_train.fuel_efficiency_mpg.values
+y_val = df_val.fuel_efficiency_mpg.values
+
+X_train = df_train[features].copy()
+X_val = df_val[features].copy()
+
+X_train = X_train.fillna(0)
+X_val = X_val.fillna(0)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_val)
+
+rmse = np.sqrt(((y_val - y_pred) ** 2).mean())
+print('RMSE with 0:', rmse)
+print('RMSE with 0 rounded:', round(rmse, 3))
+
+X_train_mean = df_train[features].copy()
+X_val_mean = df_val[features].copy()
+
+mean_horsepower = X_train_mean.horsepower.mean()
+
+X_train_mean.horsepower = X_train_mean.horsepower.fillna(mean_horsepower)
+X_val_mean.horsepower = X_val_mean.horsepower.fillna(mean_horsepower)
+
+model = LinearRegression()
+model.fit(X_train_mean, y_train)
+
+y_pred = model.predict(X_val_mean)
+
+rmse = np.sqrt(((y_val - y_pred) ** 2).mean())
+print('RMSE with mean:', rmse)
+print('RMSE with mean rounded:', round(rmse, 3))
+
+X_train = df_train[features].copy()
+X_val = df_val[features].copy()
+
+X_train = X_train.fillna(0)
+X_val = X_val.fillna(0)
+
+for r in [0, 0.01, 0.1, 1, 5, 10, 100]:
+    model = Ridge(alpha=r)
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_val)
+
+    rmse = np.sqrt(((y_val - y_pred) ** 2).mean())
+    print(r, round(rmse, 4))
+
+rmses = []
+
+for seed in range(10):
+    np.random.seed(seed)
+
+    idx = np.arange(n)
+    np.random.shuffle(idx)
+
+    df_train = df.iloc[idx[:n_train]]
+    df_val = df.iloc[idx[n_train:n_train + n_val]]
+
+    X_train = df_train[features].copy()
+    X_val = df_val[features].copy()
+
+    X_train = X_train.fillna(0)
+    X_val = X_val.fillna(0)
+
+    y_train = df_train.fuel_efficiency_mpg.values
+    y_val = df_val.fuel_efficiency_mpg.values
+
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_val)
+
+    rmse = np.sqrt(((y_val - y_pred) ** 2).mean())
+    rmses.append(rmse)
+
+    print(seed, rmse)
+
+std = np.std(rmses)
+
+print('Standard deviation:', std)
+print('Rounded:', round(std, 3))
+
+np.random.seed(9)
+
+idx = np.arange(n)
+np.random.shuffle(idx)
+
+df_train = df.iloc[idx[:n_train]]
+df_val = df.iloc[idx[n_train:n_train + n_val]]
+df_test = df.iloc[idx[n_train + n_val:]]
+
+df_full_train = pd.concat([df_train, df_val])
+
+X_full_train = df_full_train[features].copy()
+X_test = df_test[features].copy()
+
+X_full_train = X_full_train.fillna(0)
+X_test = X_test.fillna(0)
+
+y_full_train = df_full_train.fuel_efficiency_mpg.values
+y_test = df_test.fuel_efficiency_mpg.values
+
+model = Ridge(alpha=0.001)
+model.fit(X_full_train, y_full_train)
+
+y_pred = model.predict(X_test)
+
+rmse = np.sqrt(((y_test - y_pred) ** 2).mean())
+
+print('Test RMSE:', rmse)
+print('Test RMSE rounded:', round(rmse, 3))
+
